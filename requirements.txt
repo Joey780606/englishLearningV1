@@ -1,0 +1,7 @@
+PySide6>=6.6.1
+yt-dlp>=2024.12.13
+deep-translator>=1.11.4
+gTTS>=2.5.3
+pygame>=2.6.1
+pandas>=2.1.4
+webvtt-py>=0.5.1
