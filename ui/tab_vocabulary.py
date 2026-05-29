@@ -18,7 +18,8 @@ class VocabEditDialog(QDialog):
     def __init__(self, Entry: VocabularyEntry, Parent=None):
         super().__init__(Parent)
         self.setWindowTitle(f"編輯詞彙：{Entry.Word}")
-        self.setMinimumWidth(500)
+        self.setMinimumWidth(600)
+        self.setMinimumHeight(480)
         self._Entry = Entry
         self._setupUI()
 
@@ -40,12 +41,12 @@ class VocabEditDialog(QDialog):
         Form.addRow("CEFR 等級：", self._LevelEdit)
         Layout.addLayout(Form)
 
-        # 例句編輯區
+        # 例句編輯區（英文一列、中文一列，共六列）
         SentGroup = QGroupBox("例句（最多 3 個）")
-        SentLayout = QVBoxLayout(SentGroup)
+        SentForm = QFormLayout(SentGroup)
+        SentForm.setVerticalSpacing(4)
         self._SentEdits = []
         for I in range(3):
-            Row = QHBoxLayout()
             EnEdit = QLineEdit()
             ZhEdit = QLineEdit()
             EnEdit.setPlaceholderText(f"例句 {I+1} 英文")
@@ -53,10 +54,8 @@ class VocabEditDialog(QDialog):
             if I < len(self._Entry.Sentences):
                 EnEdit.setText(self._Entry.Sentences[I].EnglishSentence)
                 ZhEdit.setText(self._Entry.Sentences[I].ChineseSentence)
-            Row.addWidget(QLabel(f"{I+1}."))
-            Row.addWidget(EnEdit)
-            Row.addWidget(ZhEdit)
-            SentLayout.addLayout(Row)
+            SentForm.addRow(f"例句 {I+1} 英文：", EnEdit)
+            SentForm.addRow(f"例句 {I+1} 中文：", ZhEdit)
             self._SentEdits.append((EnEdit, ZhEdit))
         Layout.addWidget(SentGroup)
 
