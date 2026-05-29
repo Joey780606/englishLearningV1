@@ -15,7 +15,7 @@ class ImportWorker(QObject):
     """背景執行緒 Worker：執行字幕下載 → 詞彙分類 → 批次翻譯"""
 
     ProgressUpdated = Signal(int, int, str)   # current, total, message
-    Finished        = Signal(list)             # list[VocabularyEntry]
+    Finished        = Signal(list, str)        # list[VocabularyEntry], video_title
     ErrorOccurred   = Signal(str)             # error message
 
     def __init__(self, YoutubeUrl: str, SelectedLevels: list[str]):
@@ -26,9 +26,9 @@ class ImportWorker(QObject):
     def run(self):
         """執行三階段匯入流程"""
         try:
-            # 階段一：下載字幕
+            # 階段一：下載字幕並取得影片標題
             self.ProgressUpdated.emit(0, 0, "正在下載字幕...")
-            from core.youtube_extractor import extractSubtitles, SubtitleNotFoundError
+            from core.youtube_extractor import extractSubtitles, getVideoTitle, SubtitleNotFoundError
             try:
                 Sentences = extractSubtitles(self._Url)
             except SubtitleNotFoundError as E:
@@ -37,6 +37,8 @@ class ImportWorker(QObject):
             except RuntimeError as E:
                 self.ErrorOccurred.emit(str(E))
                 return
+
+            VideoTitle = getVideoTitle(self._Url)
 
             if not Sentences:
                 self.ErrorOccurred.emit("未能擷取到任何字幕內容。")
@@ -63,7 +65,7 @@ class ImportWorker(QObject):
             from core.translator import translateBatch
             Entries = translateBatch(Entries, OnProgress)
 
-            self.Finished.emit(Entries)
+            self.Finished.emit(Entries, VideoTitle)
 
         except Exception as E:
             self.ErrorOccurred.emit(f"匯入過程發生錯誤：{E}")
@@ -72,12 +74,14 @@ class ImportWorker(QObject):
 class ImportTab(QWidget):
     """Tab 1：YouTube 字幕匯入分頁"""
 
-    VocabularySaved = Signal()   # 儲存完成時通知主視窗
-    StatusMessage   = Signal(str)  # 轉發狀態訊息至主視窗狀態列
+    VocabularySaved    = Signal()     # 儲存完成時通知主視窗
+    ImportRecordSaved  = Signal()     # 匯入記錄寫入後通知歷史分頁
+    StatusMessage      = Signal(str)  # 轉發狀態訊息至主視窗狀態列
 
     def __init__(self, Parent=None):
         super().__init__(Parent)
         self._CurrentEntries: list[VocabularyEntry] = []
+        self._VideoTitle: str = ""
         self._Thread = None
         self._Worker = None
         self._setupUI()
@@ -184,7 +188,7 @@ class ImportTab(QWidget):
         self._Worker.ProgressUpdated.connect(self._onProgressUpdated)
         self._Worker.Finished.connect(self._onImportFinished)
         self._Worker.ErrorOccurred.connect(self._onImportError)
-        self._Worker.Finished.connect(self._Thread.quit)
+        self._Worker.Finished.connect(lambda *_: self._Thread.quit())
         self._Worker.ErrorOccurred.connect(self._Thread.quit)
         self._Thread.finished.connect(self._Worker.deleteLater)
 
@@ -199,10 +203,11 @@ class ImportTab(QWidget):
         else:
             self._ProgressBar.setRange(0, 0)  # 不確定進度
 
-    def _onImportFinished(self, Entries: list):
+    def _onImportFinished(self, Entries: list, VideoTitle: str):
         """匯入完成，顯示預覽"""
         self._setExtracting(False)
         self._CurrentEntries = Entries
+        self._VideoTitle = VideoTitle
 
         self._TableWidget.populate(Entries)
         self._PreviewLabel.setText(f"預覽結果（共 {len(Entries)} 個詞彙）")
@@ -218,11 +223,21 @@ class ImportTab(QWidget):
         QMessageBox.critical(self, "擷取失敗", ErrorMsg)
 
     def _onSaveClicked(self):
-        """儲存詞彙到資料庫"""
+        """儲存詞彙到資料庫，並記錄本次匯入歷史"""
         if not self._CurrentEntries:
             return
         try:
             SavedCount = db_manager.saveBatchVocabulary(self._CurrentEntries)
+
+            from models.data_models import ImportRecord
+            Record = ImportRecord(
+                SourceUrl=self._UrlInput.text().strip(),
+                VideoTitle=self._VideoTitle or "未知標題",
+                WordCount=SavedCount,
+            )
+            db_manager.saveImportRecord(Record)
+            self.ImportRecordSaved.emit()
+
             QMessageBox.information(
                 self, "儲存成功",
                 f"成功新增 {SavedCount} 個新詞彙到資料庫。\n（重複的詞彙已自動略過）"

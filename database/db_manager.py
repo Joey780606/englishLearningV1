@@ -3,7 +3,7 @@ from datetime import date, datetime
 from typing import Optional
 
 from utils.config import DATABASE_PATH
-from models.data_models import VocabularyEntry, SentenceEntry, StudyRecord, QuizRecord
+from models.data_models import VocabularyEntry, SentenceEntry, StudyRecord, QuizRecord, ImportRecord
 
 
 def initializeDatabase() -> None:
@@ -51,6 +51,14 @@ def initializeDatabase() -> None:
                 is_correct     INTEGER NOT NULL,
                 user_answer    TEXT,
                 correct_answer TEXT
+            );
+
+            CREATE TABLE IF NOT EXISTS import_history (
+                record_id   INTEGER PRIMARY KEY AUTOINCREMENT,
+                source_url  TEXT NOT NULL,
+                video_title TEXT NOT NULL,
+                word_count  INTEGER NOT NULL DEFAULT 0,
+                imported_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
         """)
         Conn.commit()
@@ -397,6 +405,49 @@ def getStudyStreakDays() -> int:
         return StreakCount
     except sqlite3.Error as E:
         raise RuntimeError(f"計算連續天數失敗：{E}")
+    finally:
+        Conn.close()
+
+
+def saveImportRecord(Record: ImportRecord) -> int:
+    """儲存匯入歷史記錄，回傳新增的 record_id"""
+    try:
+        Conn = sqlite3.connect(DATABASE_PATH)
+        Cursor = Conn.cursor()
+        Cursor.execute(
+            """INSERT INTO import_history (source_url, video_title, word_count)
+               VALUES (?, ?, ?)""",
+            (Record.SourceUrl, Record.VideoTitle, Record.WordCount)
+        )
+        Conn.commit()
+        return Cursor.lastrowid
+    except sqlite3.Error as E:
+        raise RuntimeError(f"儲存匯入記錄失敗：{E}")
+    finally:
+        Conn.close()
+
+
+def getImportHistory() -> list[ImportRecord]:
+    """取得所有匯入歷史，依時間倒序"""
+    try:
+        Conn = sqlite3.connect(DATABASE_PATH)
+        Conn.row_factory = sqlite3.Row
+        Cursor = Conn.cursor()
+        Cursor.execute(
+            "SELECT * FROM import_history ORDER BY imported_at DESC"
+        )
+        return [
+            ImportRecord(
+                RecordId=Row["record_id"],
+                SourceUrl=Row["source_url"],
+                VideoTitle=Row["video_title"],
+                WordCount=Row["word_count"],
+                ImportedAt=datetime.fromisoformat(Row["imported_at"]),
+            )
+            for Row in Cursor.fetchall()
+        ]
+    except sqlite3.Error as E:
+        raise RuntimeError(f"取得匯入歷史失敗：{E}")
     finally:
         Conn.close()
 

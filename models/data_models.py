@@ -81,6 +81,16 @@ class QuizRecord:
     RecordId: Optional[int] = None   # SQLite 主鍵
 
 
+@dataclass
+class ImportRecord:
+    """YouTube 匯入歷史記錄"""
+    SourceUrl: str                       # YouTube 網址
+    VideoTitle: str                      # 影片標題
+    WordCount: int                       # 本次新增單字數
+    ImportedAt: Optional[datetime] = None  # 匯入時間
+    RecordId: Optional[int] = None       # SQLite 主鍵
+
+
 # CSV 欄位定義（固定順序，供 csv_manager 使用）
 CSV_COLUMNS = [
     "英文單字", "詞性", "中文翻譯", "CEFR等級",
