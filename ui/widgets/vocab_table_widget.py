@@ -32,13 +32,20 @@ class VocabTableWidget(QTableWidget):
         self.setHorizontalHeaderLabels(self.HEADERS)
         self.hideColumn(self.COL_ID)
 
-        # 欄寬設定
+        # 欄寬設定：Interactive 允許使用者拖拉調整，最後一欄 Stretch 填滿剩餘空間
         Header = self.horizontalHeader()
-        Header.setSectionResizeMode(self.COL_WORD,  QHeaderView.ResizeMode.ResizeToContents)
-        Header.setSectionResizeMode(self.COL_POS,   QHeaderView.ResizeMode.ResizeToContents)
-        Header.setSectionResizeMode(self.COL_ZH,    QHeaderView.ResizeMode.Stretch)
-        Header.setSectionResizeMode(self.COL_LEVEL, QHeaderView.ResizeMode.ResizeToContents)
+        Header.setSectionResizeMode(self.COL_WORD,  QHeaderView.ResizeMode.Interactive)
+        Header.setSectionResizeMode(self.COL_POS,   QHeaderView.ResizeMode.Interactive)
+        Header.setSectionResizeMode(self.COL_ZH,    QHeaderView.ResizeMode.Interactive)
+        Header.setSectionResizeMode(self.COL_LEVEL, QHeaderView.ResizeMode.Interactive)
         Header.setSectionResizeMode(self.COL_SENT1, QHeaderView.ResizeMode.Stretch)
+        Header.setStretchLastSection(True)
+
+        # 初始欄寬
+        self.setColumnWidth(self.COL_WORD,  120)
+        self.setColumnWidth(self.COL_POS,    60)
+        self.setColumnWidth(self.COL_ZH,    160)
+        self.setColumnWidth(self.COL_LEVEL,  60)
 
         self.verticalHeader().setVisible(False)
         self.setAlternatingRowColors(True)

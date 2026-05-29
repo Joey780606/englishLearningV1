@@ -191,7 +191,17 @@ class QuizTab(QWidget):
         # 答題明細
         self._ResultTable = QTableWidget(0, 5)
         self._ResultTable.setHorizontalHeaderLabels(["題號", "題目", "你的答案", "正確答案", "結果"])
-        self._ResultTable.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        _QuizHeader = self._ResultTable.horizontalHeader()
+        _QuizHeader.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
+        _QuizHeader.setSectionResizeMode(1, QHeaderView.ResizeMode.Interactive)
+        _QuizHeader.setSectionResizeMode(2, QHeaderView.ResizeMode.Interactive)
+        _QuizHeader.setSectionResizeMode(3, QHeaderView.ResizeMode.Interactive)
+        _QuizHeader.setSectionResizeMode(4, QHeaderView.ResizeMode.Stretch)
+        _QuizHeader.setStretchLastSection(True)
+        self._ResultTable.setColumnWidth(0,  50)
+        self._ResultTable.setColumnWidth(1, 200)
+        self._ResultTable.setColumnWidth(2, 120)
+        self._ResultTable.setColumnWidth(3, 120)
         self._ResultTable.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         Layout.addWidget(self._ResultTable, stretch=1)
 
