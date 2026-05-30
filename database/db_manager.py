@@ -129,7 +129,7 @@ def saveBatchVocabulary(Entries: list[VocabularyEntry]) -> int:
                 (Entry.Word.lower(), Entry.PartOfSpeech, Entry.ChineseTranslation,
                  Entry.CefrLevel, Entry.SourceUrl)
             )
-            if Cursor.lastrowid:
+            if Cursor.rowcount > 0:
                 WordId = Cursor.lastrowid
                 SavedCount += 1
                 for I, Sentence in enumerate(Entry.Sentences[:3], start=1):
